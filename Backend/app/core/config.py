@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     environment: str = "development"
 
+    smtp_server: str | None = None
+    smtp_port: int = 587
+    sender_email: str | None = None
+    password: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
