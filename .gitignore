@@ -1,0 +1,17 @@
+# Python / backend
+Backend/venv/
+Backend/app_old_backup/
+Backend/.env
+Backend/**/__pycache__/
+Backend/**/*.pyc
+Backend/.pytest_cache/
+
+# Node / frontend
+my-app/node_modules/
+my-app/dist/
+my-app/.env
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
