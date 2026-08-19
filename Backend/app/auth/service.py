@@ -29,7 +29,8 @@ logger = get_logger(__name__)
 COOKIE_KWARGS = {
     "httponly": True,
     "secure": settings.is_production,
-    "samesite": "strict",
+    # "samesite": "strict",
+    "samesite": "none" if settings.is_production else "strict",
     "path": "/",
 }
 
