@@ -30,7 +30,8 @@ COOKIE_KWARGS = {
     "httponly": True,
     "secure": settings.is_production,
     # "samesite": "strict",
-    "samesite": "none" if settings.is_production else "strict",
+    # "samesite": "none" if settings.is_production else "strict",
+    "samesite": "strict",
     "path": "/",
 }
 
