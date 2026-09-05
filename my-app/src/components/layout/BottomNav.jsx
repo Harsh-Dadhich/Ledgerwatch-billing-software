@@ -1,4 +1,4 @@
-import { LayoutDashboard, Plus, Receipt, ShoppingBag } from "lucide-react";
+import { Boxes, LayoutDashboard, Plus, Receipt, ShoppingBag, ShoppingCart } from "lucide-react";
 
 export function BottomNav({ view, setView, user }) {
   const allLinks = [
@@ -6,6 +6,8 @@ export function BottomNav({ view, setView, user }) {
     { key: "create", label: "Add", icon: Plus, adminOnly: true },
     { key: "products", label: "Products", icon: ShoppingBag, adminOnly: false },
     { key: "bill", label: "Bill", icon: Receipt, adminOnly: false },
+    { key: "newBilling", label: "New Bill", icon: ShoppingCart, adminOnly: false },
+    { key: "inventory", label: "Inventory", icon: Boxes, adminOnly: true },
   ];
   const links = allLinks.filter((l) => !l.adminOnly || user.role === "admin");
 

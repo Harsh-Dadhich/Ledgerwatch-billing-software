@@ -7,6 +7,8 @@ import { Dashboard } from "./pages/Dashboard";
 import { CreateProduct } from "./pages/CreateProduct";
 import { Products } from "./pages/Products";
 import { CreateBill } from "./pages/CreateBill";
+import { NewBilling } from "./pages/NewBilling";
+import { InventoryHub } from "./pages/inventory/InventoryHub";
 import { useDraftBill } from "./hooks/useDraftBill";
 
 export function Console({ user, onLogout }) {
@@ -18,7 +20,7 @@ export function Console({ user, onLogout }) {
   // CreateBill and lose whatever the salesperson had already added.
   const { lineItems, setLineItems, billDiscount, setBillDiscount, clearDraft } = useDraftBill();
 
-  const isAdminView = view === "dashboard" || view === "create";
+  const isAdminView = view === "dashboard" || view === "create" || view === "inventory";
   const canSeeView = user.role === "admin" || !isAdminView;
 
   return (
@@ -42,6 +44,8 @@ export function Console({ user, onLogout }) {
             clearDraft={clearDraft}
           />
         )}
+        {view === "newBilling" && <NewBilling />}
+        {canSeeView && view === "inventory" && <InventoryHub />}
       </main>
       <Footer />
       <BottomNav view={view} setView={setView} user={user} />

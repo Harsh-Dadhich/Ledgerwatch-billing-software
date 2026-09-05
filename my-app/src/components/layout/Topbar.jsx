@@ -1,4 +1,4 @@
-import { Circle, LayoutDashboard, LogOut, Plus, Receipt, ShoppingBag, Users } from "lucide-react";
+import { Boxes, Circle, LayoutDashboard, LogOut, Plus, Receipt, ShoppingBag, ShoppingCart, Users } from "lucide-react";
 
 export function Topbar({ view, setView, user, onLogout, onAddStaff }) {
   const allLinks = [
@@ -6,6 +6,8 @@ export function Topbar({ view, setView, user, onLogout, onAddStaff }) {
     { key: "create", label: "Create product", icon: Plus, adminOnly: true },
     { key: "products", label: "Show products", icon: ShoppingBag, adminOnly: false },
     { key: "bill", label: "Create bill", icon: Receipt, adminOnly: false },
+    { key: "newBilling", label: "New Billing", icon: ShoppingCart, adminOnly: false },
+    { key: "inventory", label: "Inventory", icon: Boxes, adminOnly: true },
   ];
   const links = allLinks.filter((l) => !l.adminOnly || user.role === "admin");
 
