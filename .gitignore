@@ -18,3 +18,4 @@ Thumbs.db
 
 # Catch any .env file anywhere in the repo, not just specific paths
 **/.env
+Backend/keys/
