@@ -19,13 +19,14 @@ def _generate_and_save() -> ec.EllipticCurvePrivateKey:
 
 
 def _load_or_create() -> ec.EllipticCurvePrivateKey:
-    # Render: set SERVER_EC_PRIVATE_KEY_PEM as an env var so the key
-    # survives redeploys (disk isn't guaranteed persistent).
     pem_env = os.environ.get("SERVER_EC_PRIVATE_KEY_PEM")
     if pem_env:
-        return serialization.load_pem_private_key(
-            pem_env.encode().replace(b"\\n", b"\n"), password=None
-        )
+        pem_env = pem_env.strip().strip('"').strip("'")
+        # Support both real newlines (preferred) and literal \n escapes,
+        # in case the platform's env editor collapses line breaks.
+        if "\\n" in pem_env and "\n" not in pem_env:
+            pem_env = pem_env.replace("\\n", "\n")
+        return serialization.load_pem_private_key(pem_env.encode(), password=None)
 
     if os.path.exists(PRIVATE_KEY_PATH):
         with open(PRIVATE_KEY_PATH, "rb") as f:
