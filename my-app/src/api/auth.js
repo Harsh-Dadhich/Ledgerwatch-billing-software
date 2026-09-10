@@ -1,8 +1,10 @@
 import { request } from "./client";
+import { encryptedLogin } from "../utils/crypto";
 
 export const authApi = {
   signup: (payload) => request("/auth/signup", { method: "POST", body: JSON.stringify(payload) }),
-  login: (payload) => request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  // login: (payload) => request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) => encryptedLogin(request, payload),
   logout: () => request("/auth/logout", { method: "POST" }),
   me: () => request("/auth/me"),
   createStaff: (payload) => request("/auth/staff", { method: "POST", body: JSON.stringify(payload) }),

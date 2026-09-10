@@ -4,9 +4,15 @@ from app.auth import service
 from app.auth.deps import CurrentUser, get_current_user, require_admin
 from app.auth.payload import LoginPayload, OwnerSignupPayload, StaffCreatePayload, Updatestaff, UserOut
 from app.core.limiter import limiter
+from app.auth.payload import EncryptedRequest, EncryptedResponse
+from app.core.encryption import decrypt_request, encrypt_response
+from app.core.keys import server_public_pem
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+@router.get("/public-key")
+def get_public_key():
+    return {"public_key": server_public_pem}
 
 @router.post("/signup", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
@@ -40,12 +46,23 @@ def reactivate_staff(user_id: str, current_user: CurrentUser = Depends(require_a
     user = service.reactivate_staff(user_id, current_user.store_id)
     return service.to_user_out(user)
 
-@router.post("/login", response_model=UserOut)
+# @router.post("/login", response_model=UserOut)
+# @limiter.limit("10/minute")
+# def login(request: Request, payload: LoginPayload, response: Response):
+#     user = service.authenticate(payload)
+#     service.set_auth_cookies(response, user)
+#     return service.to_user_out(user)
+
+@router.post("/login", response_model=EncryptedResponse)
 @limiter.limit("10/minute")
-def login(request: Request, payload: LoginPayload, response: Response):
+def login(request: Request, encrypted_req: EncryptedRequest, response: Response):
+    data, aes_key = decrypt_request(encrypted_req)
+    payload = LoginPayload(email=data["email"], password=data["password"])
+
     user = service.authenticate(payload)
     service.set_auth_cookies(response, user)
-    return service.to_user_out(user)
+
+    return encrypt_response(service.to_user_out(user).model_dump(), aes_key)
 
 
 @router.post("/refresh")

@@ -41,3 +41,13 @@ class ForgotPasswordPayload(BaseModel):
 class ResetPasswordPayload(BaseModel):
     token: str
     new_password: str = Field(min_length=8, max_length=128)
+
+class EncryptedRequest(BaseModel):
+    ciphertext: str
+    iv: str
+    ephemeral_public_key: str
+
+
+class EncryptedResponse(BaseModel):
+    ciphertext: str
+    iv: str
