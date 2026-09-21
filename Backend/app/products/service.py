@@ -9,8 +9,37 @@ logger = get_logger(__name__)
 
 def to_product_out(product: Product) -> ProductOut:
     return ProductOut(
-        id=str(product.id), name=product.name,
-        price=product.price, quantity=product.quantity if product.quantity is not None else 0, is_active=product.is_active,
+        # id=str(product.id), name=product.name,
+        # price=product.price, quantity=product.quantity if product.quantity is not None else 0, is_active=product.is_active,
+        id=str(product.id),
+
+        name=product.name,
+
+        sku=product.sku,
+
+        barcode=product.barcode,
+
+        category=product.category,
+
+        brand=product.brand,
+
+        purchase_price=product.purchase_price,
+
+        price=product.price,
+
+        mrp=product.mrp,
+
+        gst_pct=product.gst_pct,
+
+        quantity=(
+            product.quantity
+            if product.quantity is not None
+            else 0
+        ),
+
+        min_stock=product.min_stock,
+
+        is_active=product.is_active,
     )
 
 
@@ -19,9 +48,22 @@ def list_products(store_id: str) -> list[Product]:
     # read on every dashboard/bill-creation load, so keep it lean.
     return (
         Product.objects(store=store_id, is_active=True)
-        .only("id", "name", "price", "quantity", "is_active")
-        .order_by("name")
-    )
+        .only(
+            # "id", "name", "price", "quantity", "is_active"
+                "id",
+                "name",
+                "sku",
+                "barcode",
+                "category",
+                "brand",
+                "purchase_price",
+                "price",
+                "mrp",
+                "gst_pct",
+                "quantity",
+                "min_stock",
+                "is_active",).order_by("name")
+            )
 
 def get_product(product_id: str, store_id: str) -> Product:
     product = Product.objects(id=product_id, store=store_id).first()
@@ -31,10 +73,35 @@ def get_product(product_id: str, store_id: str) -> Product:
 
 def create_product(payload: ProductCreatePayload, store_id: str, created_by: str) -> Product:
     product = Product(
+        # name=payload.name,
+        # price=payload.price,
+        # quantity=payload.quantity,
+        # store=store_id,
+        # created_by=created_by,
         name=payload.name,
+
+        sku=payload.sku,
+
+        barcode=payload.barcode,
+
+        category=payload.category,
+
+        brand=payload.brand,
+
+        purchase_price=payload.purchase_price,
+
         price=payload.price,
+
+        mrp=payload.mrp,
+
+        gst_pct=payload.gst_pct,
+
         quantity=payload.quantity,
+
+        min_stock=payload.min_stock,
+
         store=store_id,
+
         created_by=created_by,
     ).save()
     logger.info("Product created: store=%s product=%s", store_id, product.id)
@@ -54,6 +121,28 @@ def update_product(product_id: str, payload: ProductUpdatePayload, store_id: str
         product.quantity = payload.quantity
     if payload.is_active is not None:
         product.is_active = payload.is_active
+    if payload.sku is not None:
+        product.sku = payload.sku
+    if payload.barcode is not None:
+      product.barcode = payload.barcode
+
+    if payload.category is not None:
+        product.category = payload.category
+
+    if payload.brand is not None:
+        product.brand = payload.brand
+
+    if payload.purchase_price is not None:
+        product.purchase_price = payload.purchase_price
+
+    if payload.mrp is not None:
+        product.mrp = payload.mrp
+
+    if payload.gst_pct is not None:
+        product.gst_pct = payload.gst_pct
+
+    if payload.min_stock is not None:
+        product.min_stock = payload.min_stock
     product.save()
     return product
 

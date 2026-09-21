@@ -14,6 +14,7 @@ from mongoengine import (
 
 from app.models.product import Product
 from app.models.user import Store, User
+from app.core.enums import PaymentMethod
 
 
 class BillLineItem(EmbeddedDocument):
@@ -34,6 +35,10 @@ class Bill(Document):
     items = EmbeddedDocumentListField(BillLineItem, required=True)
     subtotal = FloatField(required=True, min_value=0)  # sum of line totals, before bill-level discount
     bill_discount_pct = FloatField(default=0, min_value=0, max_value=100)
+    payment_method = StringField(
+        choices=[m.value for m in PaymentMethod],
+        default=PaymentMethod.CASH.value,
+    ) #Accordint to new billing and inventory system
     grand_total = FloatField(required=True, min_value=0)  # subtotal after bill-level discount
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     # Voiding, not deleting: a bill is a financial record. "Deleting" a

@@ -1,14 +1,52 @@
-import { useState } from "react";
+// import { useState } from "react";
+import { useEffect, useState } from "react";
+import { productsApi } from "../../api/products";
 import { Search, Plus, Upload, Download, Edit3, ScanLine } from "lucide-react";
 import { formatINR } from "../../utils/format";
-import { mockProducts } from "../../data/mockInventory";
+// import { mockProducts } from "../../data/mockInventory";
 
 export function InventoryProductList({ onAddProduct, onOpenProduct, onImport, onBulkEdit }) {
   const [query, setQuery] = useState("");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+  loadProducts();
+}, []);
+
+const loadProducts = async () => {
+  try {
+    const data = await productsApi.list();
+    setProducts(data);
+  } catch (error) {
+    console.error("Failed to load products", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // const filtered = query.trim()
+  //   ? mockProducts.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
+  //   : mockProducts;
   const filtered = query.trim()
-    ? mockProducts.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : mockProducts;
+  ? products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+        (p.sku || "")
+          .toLowerCase()
+          .includes(query.trim().toLowerCase()) ||
+        (p.barcode || "")
+          .includes(query.trim())
+    )
+  : products;
+
+  if (loading) {
+  return (
+    <div className="p-6">
+      Loading products...
+    </div>
+  );
+}
 
   return (
     <div>
@@ -81,13 +119,14 @@ export function InventoryProductList({ onAddProduct, onOpenProduct, onImport, on
                   style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}
                 >
                   <td className="px-4 py-3 text-[13.5px] font-medium">{p.name}</td>
-                  <td className="px-4 py-3 mono text-[12.5px]" style={{ color: "var(--muted)" }}>{p.sku}</td>
-                  <td className="px-4 py-3 text-[13px]" style={{ color: "var(--muted)" }}>{p.category}</td>
-                  <td className="px-4 py-3 mono text-[13px]">{p.stock}</td>
-                  <td className="px-4 py-3 mono text-[13px]">{formatINR(p.sellPrice)}</td>
+                  <td className="px-4 py-3 mono text-[12.5px]" style={{ color: "var(--muted)" }}>{p.sku || "-"}</td>
+                  <td className="px-4 py-3 text-[13px]" style={{ color: "var(--muted)" }}>{p.category || "-"}</td>
+                  <td className="px-4 py-3 mono text-[13px]">{p.quantity ?? 0}</td>
+                  <td className="px-4 py-3 mono text-[13px]">{formatINR(p.price)}</td>
                   <td className="px-4 py-3">
                     <span className="mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(63,167,150,0.15)", color: "var(--teal)" }}>
-                      {p.status.toUpperCase()}
+                      {/* {p.status.toUpperCase()} */}
+                      {p.is_active ? "ACTIVE" : "INACTIVE"}
                     </span>
                   </td>
                 </tr>
@@ -96,7 +135,7 @@ export function InventoryProductList({ onAddProduct, onOpenProduct, onImport, on
           </table>
         </div>
         <div className="px-4 py-3 text-[12px]" style={{ borderTop: "1px solid var(--line)", background: "var(--panel2)", color: "var(--muted)" }}>
-          Showing 1–{filtered.length} of 1,245 products
+          Showing 1–{filtered.length} of {products.length} products
         </div>
       </div>
     </div>

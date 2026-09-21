@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from app.core.enums import PaymentMethod
 
 
 class BillLineItemPayload(BaseModel):
@@ -12,11 +13,23 @@ class BillLineItemPayload(BaseModel):
     unit_price: float | None = Field(default=None, gt=0)
 
 
+# class BillCreatePayload(BaseModel):
+#     items: list[BillLineItemPayload] = Field(min_length=1)
+#     # Applied to the subtotal after all line items, e.g. a final
+#     # "round it off" or loyalty discount -- separate from per-line discounts.
+#     bill_discount_pct: float = Field(default=0, ge=0, le=100)
+#     # Optional. If the client retries the same "finalize bill" tap (e.g.
+#     # after a dropped connection), sending the same key returns the
+#     # original bill instead of creating a duplicate. Generate a fresh
+#     # random value per bill attempt on the frontend (e.g. crypto.randomUUID()).
+#     idempotency_key: str | None = Field(default=None, max_length=100)
+
 class BillCreatePayload(BaseModel):
     items: list[BillLineItemPayload] = Field(min_length=1)
     # Applied to the subtotal after all line items, e.g. a final
     # "round it off" or loyalty discount -- separate from per-line discounts.
     bill_discount_pct: float = Field(default=0, ge=0, le=100)
+    payment_method: PaymentMethod = PaymentMethod.CASH# new billing and inventory system
     # Optional. If the client retries the same "finalize bill" tap (e.g.
     # after a dropped connection), sending the same key returns the
     # original bill instead of creating a duplicate. Generate a fresh
@@ -40,6 +53,7 @@ class BillOut(BaseModel):
     items: list[BillLineItemOut]
     subtotal: float
     bill_discount_pct: float
+    payment_method: PaymentMethod
     grand_total: float
     created_at: str
     is_voided: bool

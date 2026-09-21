@@ -50,8 +50,8 @@ def to_bill_out(bill: Bill, salesperson_name: str) -> BillOut:
         ],
         subtotal=bill.subtotal,
         bill_discount_pct=bill.bill_discount_pct,
+        payment_method=bill.payment_method,
         grand_total=bill.grand_total,
-        # created_at=bill.created_at.isoformat(),
         created_at=to_ist_iso(bill.created_at),
         is_voided=bill.is_voided,
     )
@@ -264,6 +264,7 @@ def create_bill(payload: BillCreatePayload, store_id: str, salesperson_id: str) 
         items=line_items,
         subtotal=subtotal,
         bill_discount_pct=payload.bill_discount_pct,
+        payment_method=payload.payment_method.value, #according to new billing and inventory system
         grand_total=grand_total,
     ).save()
 
