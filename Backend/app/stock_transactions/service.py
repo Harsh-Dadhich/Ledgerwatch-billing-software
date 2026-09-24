@@ -43,47 +43,97 @@ def create_stock_transaction(
             detail="Product not found",
         )
 
+    # qty = payload.quantity
+
+    # if payload.transaction_type == StockTransactionType.OPENING:
+    #     product.quantity = qty
+
+    # elif payload.transaction_type == StockTransactionType.PURCHASE:
+    #     product.quantity = (product.quantity or 0) + qty
+
+    # elif payload.transaction_type == StockTransactionType.SALE:
+
+    #     current_stock = product.quantity or 0
+
+    #     if current_stock < qty:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_409_CONFLICT,
+    #             detail=(
+    #                 f"Not enough stock for {product.name}"
+    #             ),
+    #         )
+
+    #     product.quantity = current_stock - qty
+
+    # elif payload.transaction_type == StockTransactionType.DAMAGE:
+
+    #     current_stock = product.quantity or 0
+
+    #     if current_stock < qty:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_409_CONFLICT,
+    #             detail=(
+    #                 f"Not enough stock for {product.name}"
+    #             ),
+    #         )
+
+    #     product.quantity = current_stock - qty
     qty = payload.quantity
+    ttype = payload.transaction_type
 
-    if payload.transaction_type == StockTransactionType.OPENING:
-        product.quantity = qty
-
-    elif payload.transaction_type == StockTransactionType.PURCHASE:
-        product.quantity = (product.quantity or 0) + qty
-
-    elif payload.transaction_type == StockTransactionType.SALE:
-
-        current_stock = product.quantity or 0
-
-        if current_stock < qty:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Not enough stock for {product.name}"
-                ),
-            )
-
-        product.quantity = current_stock - qty
-
-    elif payload.transaction_type == StockTransactionType.DAMAGE:
-
-        current_stock = product.quantity or 0
-
-        if current_stock < qty:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Not enough stock for {product.name}"
-                ),
-            )
-
-        product.quantity = current_stock - qty
-
-    elif payload.transaction_type == StockTransactionType.ADJUSTMENT:
+    if ttype == StockTransactionType.OPENING:
 
         product.quantity = qty
+        product.save()
 
-    product.save()
+    elif ttype == StockTransactionType.ADJUSTMENT:
+
+        product.quantity = qty
+        product.save()
+
+    elif ttype == StockTransactionType.PURCHASE:
+
+        product = Product.objects(
+            id=product.id,
+            store=store_id,
+        ).modify(
+            new=True,
+            inc__quantity=qty,
+        )
+
+    elif ttype in (
+        StockTransactionType.SALE,
+        StockTransactionType.DAMAGE,
+    ):
+
+    # Inventory not tracked
+        if product.quantity is None:
+
+            pass
+
+        else:
+
+            product = Product.objects(
+                id=product.id,
+                store=store_id,
+                quantity__gte=qty,
+            ).modify(
+                new=True,
+                dec__quantity=qty,
+            )
+
+            if product is None:
+
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Not enough stock",
+                )
+
+        # elif payload.transaction_type == StockTransactionType.ADJUSTMENT:
+
+        #     product.quantity = qty
+
+    # product.save()
 
     transaction = StockTransaction(
         product=product,

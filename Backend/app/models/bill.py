@@ -29,7 +29,7 @@ class BillLineItem(EmbeddedDocument):
 
 
 class Bill(Document):
-    bill_number = StringField(required=True, unique=True)
+    bill_number = StringField(required=True)
     store = ReferenceField(Store, required=True)
     salesperson = ReferenceField(User, required=True)
     items = EmbeddedDocumentListField(BillLineItem, required=True)
@@ -51,7 +51,10 @@ class Bill(Document):
     meta = {
         "collection": "bills",
         "indexes": [
-            "bill_number",
+            {
+            "fields": ["store", "bill_number"],
+            "unique": True,
+            },
             "salesperson",
             {"fields": ["store", "-created_at"]},
         ],

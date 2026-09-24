@@ -60,14 +60,31 @@ def create_brand(
     existing = Brand.objects(
         store=store_id,
         name=payload.name,
-        is_active=True,
+        # is_active=True,
     ).first()
 
     if existing:
-        raise HTTPException(
+        # raise HTTPException(
+        #     status_code=status.HTTP_409_CONFLICT,
+        #     detail="Brand already exists",
+        # )
+        if existing.is_active:
+            raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Brand already exists",
+            )
+
+        existing.is_active = True
+        existing.description = payload.description
+        existing.save()
+
+        logger.info(
+            "Brand reactivated: store=%s brand=%s",
+            store_id,
+            existing.id,
         )
+
+        return existing
 
     brand = Brand(
         name=payload.name,

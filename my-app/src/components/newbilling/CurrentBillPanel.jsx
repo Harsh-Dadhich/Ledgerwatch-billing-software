@@ -1,8 +1,11 @@
-import { ShoppingCart, Trash2, FileText, BookmarkPlus, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Trash2, FileText, BookmarkPlus, Minus, Plus, Loader2 } from "lucide-react";
 import { formatINR } from "../../utils/format";
 import { PaymentMethodSelector } from "./PaymentMethodSelector";
 
-export function CurrentBillPanel({ cart, onQtyChange, onDiscountChange, onRemove, onClear, paymentMethod, onPaymentMethodChange }) {
+export function CurrentBillPanel({
+  cart, onQtyChange, onDiscountChange, onRemove, onClear,
+  paymentMethod, onPaymentMethodChange, onGenerateBill, generating,
+}) {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const discountTotal = cart.reduce((sum, item) => sum + (item.price * item.qty * item.discountPct) / 100, 0);
   const tax = 0; // static preview -- tax rate wiring comes with the real backend
@@ -157,11 +160,13 @@ export function CurrentBillPanel({ cart, onQtyChange, onDiscountChange, onRemove
 
       <button
         type="button"
+        onClick={onGenerateBill}
+        disabled={cart.length === 0 || generating}
         className="flex items-center justify-center gap-2 rounded-md py-3 text-[14px] font-semibold disp"
-        style={{ background: "var(--brass)", color: "#14171C" }}
+        style={{ background: "var(--brass)", color: "#14171C", opacity: cart.length === 0 || generating ? 0.6 : 1 }}
       >
-        <FileText size={16} />
-        Generate bill
+        {generating ? <Loader2 size={16} className="spin" /> : <FileText size={16} />}
+        {generating ? "Saving bill…" : "Generate bill"}
       </button>
       <button
         type="button"

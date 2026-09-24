@@ -60,14 +60,33 @@ def create_category(
     existing = Category.objects(
         store=store_id,
         name=payload.name,
-        is_active=True,
+        # is_active=True,
     ).first()
+    print("STORE:", store_id)
+    print("NAME:", payload.name)
+    print("EXISTING:", existing)
 
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Category already exists",
+        # raise HTTPException(
+        #     status_code=status.HTTP_409_CONFLICT,
+        #     detail="Category already exists",
+        # )
+        if existing.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Category already exists",
+            )
+
+        existing.is_active = True
+        existing.description = payload.description
+        existing.save()
+        logger.info(
+            "Category reactivated: store=%s category=%s",
+            store_id,
+            existing.id,
         )
+
+        return existing
 
     category = Category(
         name=payload.name,
