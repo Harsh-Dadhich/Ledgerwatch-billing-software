@@ -10,6 +10,8 @@ import { InventoryStockHistory } from "./InventoryStockHistory";
 import { InventoryLowStock } from "./InventoryLowStock";
 import { InventoryBulkImport } from "./InventoryBulkImport";
 import { InventoryBulkEdit } from "./InventoryBulkEdit";
+import { AddInventoryCategory } from "./Addinventorycategory";
+import { AddInventoryBrand } from "./Addinventorybrand";
 
 export function InventoryHub() {
   // "tab" drives the visible sub-nav. "drill" is a stack-free single-level
@@ -41,6 +43,36 @@ export function InventoryHub() {
     );
   }
 
+  if (drill === "add-category") {
+  return (
+    <div>
+      <InventorySubNav
+        active={tab}
+        onChange={changeTab}
+      />
+
+      <AddInventoryCategory
+        onBack={() => setDrill(null)}
+      />
+    </div>
+  );
+}
+
+if (drill === "add-brand") {
+  return (
+    <div>
+      <InventorySubNav
+        active={tab}
+        onChange={changeTab}
+      />
+
+      <AddInventoryBrand
+        onBack={() => setDrill(null)}
+      />
+    </div>
+  );
+}
+
   return (
     <div>
       <InventorySubNav active={tab} onChange={changeTab} />
@@ -53,8 +85,18 @@ export function InventoryHub() {
           onBulkEdit={() => changeTab("bulkedit")}
         />
       )}
-      {tab === "categories" && <InventoryCategories />}
-      {tab === "brands" && <InventoryBrands />}
+      {/* {tab === "categories" && <InventoryCategories />} */}
+      {tab === "categories" && (
+      <InventoryCategories
+        onAddCategory={() => setDrill("add-category")}
+        />
+      )}
+      {/* {tab === "brands" && <InventoryBrands />} */}
+      {tab === "brands" && (
+      <InventoryBrands
+        onAddBrand={() =>setDrill("add-brand")}
+        />
+      )}
       {tab === "history" && <InventoryStockHistory />}
       {tab === "lowstock" && <InventoryLowStock />}
       {tab === "import" && <InventoryBulkImport />}

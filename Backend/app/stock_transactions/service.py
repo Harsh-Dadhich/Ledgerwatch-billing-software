@@ -23,6 +23,7 @@ def to_stock_transaction_out(
         transaction_type=transaction.transaction_type,
         quantity=transaction.quantity,
         notes=transaction.notes,
+        created_at=transaction.created_at,
     )
 
 def create_stock_transaction(

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -17,3 +18,4 @@ class StockTransactionResponse(BaseModel):
     transaction_type: str
     quantity: float
     notes: Optional[str] = None
+    created_at: datetime

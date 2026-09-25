@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -128,3 +130,10 @@ class ProductOut(BaseModel):
     min_stock: float | None
 
     is_active: bool
+
+class LowStockProductResponse(BaseModel):
+    id: str
+    name: str
+    sku: Optional[str] = None
+    quantity: float
+    min_stock: float

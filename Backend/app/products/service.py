@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 
 from app.core.logger import get_logger
 from app.models.product import Product
-from app.products.payload import ProductCreatePayload, ProductOut, ProductUpdatePayload
+from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload
 
 logger = get_logger(__name__)
 
@@ -209,3 +209,28 @@ def restore_product_stock(product_id: str, store_id: str, amount: float) -> None
     decremented earlier in the same bill if a later item fails.
     """
     Product.objects(id=product_id, store=store_id).update(inc__quantity=amount)
+
+def list_low_stock_products(store_id: str):
+
+    products = Product.objects(
+        store=store_id,
+        is_active=True,
+        quantity__ne=None,
+        min_stock__ne=None,
+    )
+
+    return [
+        product
+        for product in products
+        if product.quantity <= product.min_stock
+    ]
+
+def to_low_stock_out(product: Product):
+
+    return LowStockProductResponse(
+        id=str(product.id),
+        name=product.name,
+        sku=product.sku,
+        quantity=product.quantity,
+        min_stock=product.min_stock,
+    )

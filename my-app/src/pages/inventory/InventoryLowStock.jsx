@@ -1,38 +1,246 @@
-import { Download, ShoppingCart } from "lucide-react";
-import { mockLowStock } from "../../data/mockInventory";
+// import { Download, ShoppingCart } from "lucide-react";
+// import { mockLowStock } from "../../data/mockInventory";
+
+// export function InventoryLowStock() {
+//   return (
+//     <div>
+//       <h1 className="disp text-[26px] font-semibold tracking-tight mb-6">Low stock products</h1>
+
+//       <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--line)" }}>
+//         <table className="w-full text-left">
+//           <thead>
+//             <tr style={{ background: "var(--panel2)" }}>
+//               {["Product", "Current", "Min stock"].map((h) => (
+//                 <th key={h} className="px-4 py-2.5 text-[11px] font-medium" style={{ color: "var(--muted)" }}>{h.toUpperCase()}</th>
+//               ))}
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {mockLowStock.map((item, i) => (
+//               <tr key={i} style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
+//                 <td className="px-4 py-3 text-[13.5px] font-medium">{item.name}</td>
+//                 <td className="px-4 py-3 mono text-[13px]" style={{ color: "var(--rust)" }}>{item.stock}</td>
+//                 <td className="px-4 py-3 mono text-[13px]" style={{ color: "var(--muted)" }}>{item.minStock}</td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+//       </div>
+
+//       <div className="flex gap-2 mt-4">
+//         <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-[13.5px] font-semibold disp" style={{ background: "var(--brass)", color: "#14171C" }}>
+//           <ShoppingCart size={15} /> Create purchase order
+//         </button>
+//         <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-[13.5px] font-medium" style={{ border: "1px solid var(--line)", color: "var(--muted)" }}>
+//           <Download size={15} /> Export
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
+
+import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
+
+import { productsApi } from "../../api/products";
 
 export function InventoryLowStock() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+
+      const data =
+        await productsApi.lowStock();
+
+      setProducts(data);
+    } catch (error) {
+      console.error(
+        "Failed to load low stock products",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatus = (
+    quantity,
+    minStock
+  ) => {
+    if (quantity === 0)
+      return "Critical";
+
+    if (
+      quantity <= minStock * 0.5
+    )
+      return "Low";
+
+    return "Warning";
+  };
+
   return (
     <div>
-      <h1 className="disp text-[26px] font-semibold tracking-tight mb-6">Low stock products</h1>
+      <h1 className="disp text-[26px] font-semibold tracking-tight mb-6">
+        Low Stock Alerts
+      </h1>
 
-      <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--line)" }}>
+      {/* Summary Card */}
+      <div
+        className="mb-6 rounded-lg p-4"
+        style={{
+          border: "1px solid var(--line)",
+          background:
+            "var(--panel)",
+        }}
+      >
+        <div
+          className="text-[12px]"
+          style={{
+            color:
+              "var(--muted)",
+          }}
+        >
+          PRODUCTS BELOW REORDER LEVEL
+        </div>
+
+        <div className="disp text-[30px] font-semibold mt-1">
+          {products.length}
+        </div>
+      </div>
+
+      <div
+        className="rounded-lg overflow-hidden"
+        style={{
+          border:
+            "1px solid var(--line)",
+        }}
+      >
         <table className="w-full text-left">
           <thead>
-            <tr style={{ background: "var(--panel2)" }}>
-              {["Product", "Current", "Min stock"].map((h) => (
-                <th key={h} className="px-4 py-2.5 text-[11px] font-medium" style={{ color: "var(--muted)" }}>{h.toUpperCase()}</th>
+            <tr
+              style={{
+                background:
+                  "var(--panel2)",
+              }}
+            >
+              {[
+                "Product",
+                "SKU",
+                "Current",
+                "Min Stock",
+                "Status",
+              ].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-2.5 text-[11px] font-medium"
+                  style={{
+                    color:
+                      "var(--muted)",
+                  }}
+                >
+                  {h.toUpperCase()}
+                </th>
               ))}
             </tr>
           </thead>
+
           <tbody>
-            {mockLowStock.map((item, i) => (
-              <tr key={i} style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
-                <td className="px-4 py-3 text-[13.5px] font-medium">{item.name}</td>
-                <td className="px-4 py-3 mono text-[13px]" style={{ color: "var(--rust)" }}>{item.stock}</td>
-                <td className="px-4 py-3 mono text-[13px]" style={{ color: "var(--muted)" }}>{item.minStock}</td>
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center"
+                >
+                  Loading...
+                </td>
               </tr>
-            ))}
+            ) : products.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center"
+                >
+                  No low stock products 🎉
+                </td>
+              </tr>
+            ) : (
+              products.map(
+                (product) => (
+                  <tr
+                    key={product.id}
+                    style={{
+                      borderTop:
+                        "1px solid var(--line)",
+                      background:
+                        "var(--panel)",
+                    }}
+                  >
+                    <td className="px-4 py-3 text-[13.5px] font-medium">
+                      {product.name}
+                    </td>
+
+                    <td className="px-4 py-3 mono text-[13px]">
+                      {product.sku ||
+                        "—"}
+                    </td>
+
+                    <td
+                      className="px-4 py-3 mono text-[13px]"
+                      style={{
+                        color:
+                          "var(--rust)",
+                      }}
+                    >
+                      {
+                        product.quantity
+                      }
+                    </td>
+
+                    <td
+                      className="px-4 py-3 mono text-[13px]"
+                      style={{
+                        color:
+                          "var(--muted)",
+                      }}
+                    >
+                      {
+                        product.min_stock
+                      }
+                    </td>
+
+                    <td className="px-4 py-3 text-[13px]">
+                      {getStatus(
+                        product.quantity,
+                        product.min_stock
+                      )}
+                    </td>
+                  </tr>
+                )
+              )
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="flex gap-2 mt-4">
-        <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-[13.5px] font-semibold disp" style={{ background: "var(--brass)", color: "#14171C" }}>
-          <ShoppingCart size={15} /> Create purchase order
-        </button>
-        <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-[13.5px] font-medium" style={{ border: "1px solid var(--line)", color: "var(--muted)" }}>
-          <Download size={15} /> Export
+        <button
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-[13.5px] font-medium"
+          style={{
+            border:
+              "1px solid var(--line)",
+            color:
+              "var(--muted)",
+          }}
+        >
+          <Download size={15} />
+          Export
         </button>
       </div>
     </div>

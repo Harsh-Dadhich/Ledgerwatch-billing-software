@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.auth.deps import CurrentUser, get_current_user, require_admin
 from app.products import service
-from app.products.payload import ProductCreatePayload, ProductOut, ProductUpdatePayload
+from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -11,6 +11,26 @@ router = APIRouter(prefix="/products", tags=["products"])
 def list_products(current_user: CurrentUser = Depends(get_current_user)):
     products = service.list_products(current_user.store_id)
     return [service.to_product_out(p) for p in products]
+
+@router.get(
+    "/low-stock",
+    response_model=list[LowStockProductResponse],
+)
+def list_low_stock_products(
+    current_user: CurrentUser = Depends(
+        get_current_user
+    ),
+):
+
+    products = service.list_low_stock_products(
+        current_user.store_id
+    )
+
+    return [
+        service.to_low_stock_out(product)
+        for product in products
+    ]
+
 
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: str, current_user: CurrentUser = Depends(get_current_user)):
@@ -37,3 +57,4 @@ def update_product(
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(product_id: str, current_user: CurrentUser = Depends(require_admin)):
     service.delete_product(product_id, current_user.store_id)
+
