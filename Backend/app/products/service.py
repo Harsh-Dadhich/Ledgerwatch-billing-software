@@ -1,8 +1,14 @@
 from fastapi import HTTPException, status
+import io
+import pandas as pd
 
 from app.core.logger import get_logger
 from app.models.product import Product
-from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload
+from app.core.enums import StockTransactionType
+from app.models.stock_transaction import StockTransaction
+from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload,BulkImportResult, BulkImportRowError
+from app.categories.service import get_or_create_category
+from app.brands.service import get_or_create_brand
 
 logger = get_logger(__name__)
 
@@ -233,4 +239,356 @@ def to_low_stock_out(product: Product):
         sku=product.sku,
         quantity=product.quantity,
         min_stock=product.min_stock,
+    )
+
+# MAX_IMPORT_ROWS = 5000
+# REQUIRED_IMPORT_COLUMNS = {"name", "price"}
+
+
+# def _clean_str(value) -> str | None:
+#     if value is None or (isinstance(value, float) and pd.isna(value)):
+#         return None
+#     s = str(value).strip()
+#     return s or None
+
+
+# def _clean_float(value) -> float | None:
+#     if value is None or (isinstance(value, float) and pd.isna(value)):
+#         return None
+#     try:
+#         return float(value)
+#     except (TypeError, ValueError):
+#         return None
+
+
+# def _parse_import_file(filename: str, raw_bytes: bytes) -> pd.DataFrame:
+#     lower = filename.lower()
+#     try:
+#         if lower.endswith(".csv"):
+#             df = pd.read_csv(io.BytesIO(raw_bytes))
+#         elif lower.endswith((".xlsx", ".xls")):
+#             df = pd.read_excel(io.BytesIO(raw_bytes))
+#         else:
+#             raise HTTPException(status_code=400, detail="Upload a .csv or .xlsx file")
+#     except HTTPException:
+#         raise
+#     except Exception:
+#         raise HTTPException(status_code=400, detail="Could not read this file -- is it a valid CSV/Excel file?")
+
+#     df.columns = df.columns.str.strip()
+#     missing = REQUIRED_IMPORT_COLUMNS - set(df.columns)
+#     if missing:
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"Missing required column(s): {', '.join(sorted(missing))}. Download the template and match its headers exactly.",
+#         )
+#     if len(df) > MAX_IMPORT_ROWS:
+#         raise HTTPException(status_code=400, detail=f"Too many rows ({len(df)}) -- split into files of {MAX_IMPORT_ROWS} or fewer")
+
+#     return df
+
+
+# def bulk_import_products(filename: str, raw_bytes: bytes, store_id: str, created_by: str) -> BulkImportResult:
+#     df = _parse_import_file(filename, raw_bytes)
+
+#     created = 0
+#     updated = 0
+#     errors: list[BulkImportRowError] = []
+
+#     for idx, row in df.iterrows():
+#         row_num = idx + 2  # +1 for 0-index, +1 for the header row
+#         try:
+#             name = _clean_str(row.get("name"))
+#             if not name:
+#                 raise ValueError("Name is required")
+
+#             price = _clean_float(row.get("price"))
+#             if price is None or price <= 0:
+#                 raise ValueError("Price must be a number greater than 0")
+
+#             sku = _clean_str(row.get("sku"))
+#             fields = dict(
+#                 name=name,
+#                 price=price,
+#                 barcode=_clean_str(row.get("barcode")),
+#                 category=_clean_str(row.get("category")),
+#                 brand=_clean_str(row.get("brand")),
+#                 purchase_price=_clean_float(row.get("purchase_price")),
+#                 mrp=_clean_float(row.get("mrp")),
+#                 gst_pct=_clean_float(row.get("gst_pct")) or 0,
+#                 min_stock=_clean_float(row.get("min_stock")) or 0,
+#             )
+#             quantity = _clean_float(row.get("quantity"))
+
+#             existing = Product.objects(store=store_id, sku=sku, is_active=True).first() if sku else None
+
+#             if existing:
+#                 for key, value in fields.items():
+#                     setattr(existing, key, value)
+#                 # Deliberately not touching quantity here -- see the
+#                 # design note above.
+#                 existing.save()
+#                 updated += 1
+#             else:
+#                 product = Product(
+#                     sku=sku, quantity=quantity, store=store_id, created_by=created_by, **fields,
+#                 ).save()
+#                 if quantity is not None:
+#                     StockTransaction(
+#                         product=product, store=store_id,
+#                         transaction_type=StockTransactionType.OPENING.value,
+#                         quantity=quantity, notes="Bulk import opening stock",
+#                         created_by=created_by,
+#                     ).save()
+#                 created += 1
+
+#         except Exception as e:
+#             errors.append(BulkImportRowError(row=row_num, error=str(e)))
+
+#     return BulkImportResult(rows_found=len(df), created=created, updated=updated, errors=errors)
+
+MAX_IMPORT_ROWS = 5000
+REQUIRED_IMPORT_COLUMNS = {"name", "price"}
+
+
+def _clean_str(value) -> str | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+
+    s = str(value).strip()
+    return s or None
+
+
+def _clean_float(value) -> float | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_import_file(filename: str, raw_bytes: bytes) -> pd.DataFrame:
+    lower = filename.lower()
+
+    try:
+        if lower.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(raw_bytes))
+
+        elif lower.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(raw_bytes))
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Upload a .csv or .xlsx file",
+            )
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not read this file -- is it a valid CSV/Excel file?",
+        )
+
+    df.columns = df.columns.str.strip()
+
+    missing = REQUIRED_IMPORT_COLUMNS - set(df.columns)
+
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Missing required column(s): "
+                f"{', '.join(sorted(missing))}. "
+                "Download the template and match its headers exactly."
+            ),
+        )
+
+    if len(df) > MAX_IMPORT_ROWS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Too many rows ({len(df)}) -- "
+                f"split into files of {MAX_IMPORT_ROWS} or fewer"
+            ),
+        )
+
+    return df
+
+
+def bulk_import_products(
+    filename: str,
+    raw_bytes: bytes,
+    store_id: str,
+    created_by: str,
+) -> BulkImportResult:
+
+    df = _parse_import_file(filename, raw_bytes)
+
+    created = 0
+    updated = 0
+    errors: list[BulkImportRowError] = []
+
+    for idx, row in df.iterrows():
+
+        row_num = idx + 2  # +1 for 0-index, +1 for header row
+
+        try:
+            # ---------------------------------------------------------
+            # 1. Basic product fields
+            # ---------------------------------------------------------
+
+            name = _clean_str(row.get("name"))
+
+            if not name:
+                raise ValueError("Name is required")
+
+            price = _clean_float(row.get("price"))
+
+            if price is None or price <= 0:
+                raise ValueError("Price must be a number greater than 0")
+
+            sku = _clean_str(row.get("sku"))
+
+            # ---------------------------------------------------------
+            # 2. Category and Brand
+            # ---------------------------------------------------------
+            # These are still stored as strings on Product.
+            #
+            # We ALSO make sure the corresponding Category and Brand
+            # master records exist.
+            # ---------------------------------------------------------
+
+            category_name = _clean_str(row.get("category"))
+            brand_name = _clean_str(row.get("brand"))
+
+            # Create/reuse/reactivate Category
+            if category_name:
+                get_or_create_category(
+                    name=category_name,
+                    store_id=store_id,
+                    created_by=created_by,
+                )
+
+            # Create/reuse/reactivate Brand
+            if brand_name:
+                get_or_create_brand(
+                    name=brand_name,
+                    store_id=store_id,
+                    created_by=created_by,
+                )
+
+            # ---------------------------------------------------------
+            # 3. Product fields
+            # ---------------------------------------------------------
+
+            fields = dict(
+                name=name,
+                price=price,
+                barcode=_clean_str(row.get("barcode")),
+                category=category_name,
+                brand=brand_name,
+                purchase_price=_clean_float(
+                    row.get("purchase_price")
+                ),
+                mrp=_clean_float(
+                    row.get("mrp")
+                ),
+                gst_pct=_clean_float(
+                    row.get("gst_pct")
+                ) or 0,
+                min_stock=_clean_float(
+                    row.get("min_stock")
+                ) or 0,
+            )
+
+            quantity = _clean_float(row.get("quantity"))
+
+            # ---------------------------------------------------------
+            # 4. Check whether product already exists
+            # ---------------------------------------------------------
+
+            existing = (
+                Product.objects(
+                    store=store_id,
+                    sku=sku,
+                    is_active=True,
+                ).first()
+                if sku
+                else None
+            )
+
+            # ---------------------------------------------------------
+            # 5. Update existing product
+            # ---------------------------------------------------------
+
+            if existing:
+
+                for key, value in fields.items():
+                    setattr(existing, key, value)
+
+                # Deliberately do NOT update quantity here.
+                #
+                # Quantity is managed through stock transactions.
+                # This preserves your existing behavior.
+
+                existing.save()
+
+                updated += 1
+
+            # ---------------------------------------------------------
+            # 6. Create new product
+            # ---------------------------------------------------------
+
+            else:
+
+                product = Product(
+                    sku=sku,
+                    quantity=quantity,
+                    store=store_id,
+                    created_by=created_by,
+                    **fields,
+                ).save()
+
+                # -----------------------------------------------------
+                # 7. Opening stock transaction
+                # -----------------------------------------------------
+
+                if quantity is not None:
+
+                    StockTransaction(
+                        product=product,
+                        store=store_id,
+                        transaction_type=(
+                            StockTransactionType.OPENING.value
+                        ),
+                        quantity=quantity,
+                        notes="Bulk import opening stock",
+                        created_by=created_by,
+                    ).save()
+
+                created += 1
+
+        except Exception as e:
+
+            errors.append(
+                BulkImportRowError(
+                    row=row_num,
+                    error=str(e),
+                )
+            )
+
+    # -------------------------------------------------------------
+    # 8. Return import result
+    # -------------------------------------------------------------
+
+    return BulkImportResult(
+        rows_found=len(df),
+        created=created,
+        updated=updated,
+        errors=errors,
     )

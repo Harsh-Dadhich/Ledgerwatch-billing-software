@@ -159,3 +159,43 @@ def delete_category(
         store_id,
         category_id,
     )
+
+def get_or_create_category(
+    name: str,
+    store_id: str,
+    created_by: str,
+) -> Category:
+    name = name.strip()
+
+    existing = Category.objects(
+        store=store_id,
+        name=name,
+    ).first()
+
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            existing.save()
+
+            logger.info(
+                "Category reactivated during product import: store=%s category=%s",
+                store_id,
+                existing.id,
+            )
+
+        return existing
+
+    category = Category(
+        name=name,
+        store=store_id,
+        created_by=created_by,
+        is_active=True,
+    ).save()
+
+    logger.info(
+        "Category created during product import: store=%s category=%s",
+        store_id,
+        category.id,
+    )
+
+    return category

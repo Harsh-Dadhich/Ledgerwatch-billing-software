@@ -157,3 +157,42 @@ def delete_brand(
         store_id,
         brand.id,
     )
+def get_or_create_brand(
+    name: str,
+    store_id: str,
+    created_by: str,
+) -> Brand:
+    name = name.strip()
+
+    existing = Brand.objects(
+        store=store_id,
+        name=name,
+    ).first()
+
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            existing.save()
+
+            logger.info(
+                "Brand reactivated during product import: store=%s brand=%s",
+                store_id,
+                existing.id,
+            )
+
+        return existing
+
+    brand = Brand(
+        name=name,
+        store=store_id,
+        created_by=created_by,
+        is_active=True,
+    ).save()
+
+    logger.info(
+        "Brand created during product import: store=%s brand=%s",
+        store_id,
+        brand.id,
+    )
+
+    return brand

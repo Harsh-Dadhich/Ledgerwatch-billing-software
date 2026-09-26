@@ -137,3 +137,14 @@ class LowStockProductResponse(BaseModel):
     sku: Optional[str] = None
     quantity: float
     min_stock: float
+
+class BulkImportRowError(BaseModel):
+    row: int
+    error: str
+
+
+class BulkImportResult(BaseModel):
+    rows_found: int
+    created: int
+    updated: int
+    errors: list[BulkImportRowError]
