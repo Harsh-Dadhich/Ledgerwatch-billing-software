@@ -84,11 +84,14 @@ export function InventoryDashboard({ onViewLowStock }) {
       setError("");
 
       const [productsData, lowStockData] = await Promise.all([
-        productsApi.list(),
+        productsApi.list({
+        page: 1,
+        limit: 100,
+      }),
         productsApi.lowStock(),
       ]);
 
-      setProducts(productsData);
+      setProducts(productsData.items);
       setLowStockProducts(lowStockData);
     } catch (err) {
       console.error("Failed to load inventory dashboard:", err);
@@ -96,7 +99,7 @@ export function InventoryDashboard({ onViewLowStock }) {
     } finally {
       setLoading(false);
     }
-  }
+  } 
 
   // -----------------------------
   // Dashboard calculations

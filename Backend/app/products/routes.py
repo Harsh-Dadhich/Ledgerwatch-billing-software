@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.deps import CurrentUser, get_current_user, require_admin
 from app.products import service
-from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload
+from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut,ProductListResponse, ProductUpdatePayload
 from fastapi import UploadFile, File
 from fastapi.responses import Response
 from app.products.payload import BulkImportResult
@@ -10,10 +10,42 @@ from app.products.payload import BulkImportResult
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.get("", response_model=list[ProductOut])
-def list_products(current_user: CurrentUser = Depends(get_current_user)):
-    products = service.list_products(current_user.store_id)
-    return [service.to_product_out(p) for p in products]
+# @router.get("", response_model=list[ProductOut])
+# def list_products(current_user: CurrentUser = Depends(get_current_user)):
+#     products = service.list_products(current_user.store_id)
+#     return [service.to_product_out(p) for p in products]
+
+@router.get(
+    "",
+    response_model=ProductListResponse,
+)
+def list_products(
+    search: str | None = Query(
+        default=None,
+        description="Search by product name, SKU, barcode, brand, or category",
+    ),
+    category: str | None = Query(
+        default=None,
+        description="Filter products by category",
+    ),
+    page: int = Query(
+        default=1,
+        ge=1,
+    ),
+    page_size: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+    ),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    return service.list_products(
+        store_id=current_user.store_id,
+        search=search,
+        category=category,
+        page=page,
+        page_size=page_size,
+    )
 
 @router.get(
     "/low-stock",

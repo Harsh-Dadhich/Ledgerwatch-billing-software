@@ -53,7 +53,7 @@ import { useEffect, useMemo, useState } from "react";
 import { productsApi } from "../../api/products";
 import { stockTransactionsApi } from "../../api/stockTransactions";
 
-export function InventoryStockHistory() {
+export function InventoryStockHistory({ initialProductId }) {
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
@@ -72,12 +72,37 @@ export function InventoryStockHistory() {
         setLoadingProducts(true);
         setError("");
 
-        const data = await productsApi.list();
+        // If Stock History was opened from a specific product,
+      // fetch that exact product directly.
+        if (initialProductId) {
+          const product = await productsApi.get(initialProductId);
 
-        setProducts(data);
+            setProducts([product]);
+            setSelectedProductId(product.id);
 
-        if (data.length > 0) {
-          setSelectedProductId(data[0].id);
+          return;
+        }
+        // Otherwise, load the first page for the product selector.
+        const data = await productsApi.list({
+          page: 1,
+          pageSize: 100,
+        });
+        const productItems = data.items || [];
+
+        setProducts(productItems);
+        if (initialProductId) {
+          const productExists = productItems.some(
+            (product) => product.id === initialProductId
+          );
+
+          if (productExists) {
+            setSelectedProductId(initialProductId);
+            return;
+          }
+        }
+
+        if (productItems.length > 0) {
+          setSelectedProductId(productItems[0].id);
         }
       } catch (err) {
         console.error("Failed to load products:", err);
