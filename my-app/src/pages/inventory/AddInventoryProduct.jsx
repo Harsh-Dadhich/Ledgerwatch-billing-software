@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Field } from "../../components/common/Field";
+import { productsApi } from "../../api/products";
 
 function Select({ children, ...props }) {
   return (
@@ -25,8 +26,61 @@ function Input(props) {
 }
 
 export function AddInventoryProduct({ onBack }) {
-  const [form, setForm] = useState({});
+  // const [form, setForm] = useState({});
+  const [form, setForm] = useState({
+  name: "",
+  sku: "",
+  barcode: "",
+  category: "",
+  brand: "",
+  purchase_price: "",
+  price: "",
+  mrp: "",
+  gst_pct: "",
+  quantity: "",
+  min_stock: 5,
+});
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const handleSave = async () => {
+  try {
+    await productsApi.create({
+      name: form.name,
+      sku: form.sku || null,
+      barcode: form.barcode || null,
+      category: form.category || null,
+      brand: form.brand || null,
+
+      purchase_price: form.purchase_price
+        ? Number(form.purchase_price)
+        : null,
+
+      price: Number(form.price),
+
+      mrp: form.mrp
+        ? Number(form.mrp)
+        : null,
+
+      gst_pct: form.gst_pct
+        ? Number(form.gst_pct)
+        : 0,
+
+      quantity: form.quantity
+        ? Number(form.quantity)
+        : 0,
+
+      min_stock: form.min_stock
+        ? Number(form.min_stock)
+        : 0,
+    });
+
+    alert("Product created successfully");
+
+    onBack();
+  } catch (error) {
+    console.error(error);
+    alert("Failed to create product");
+  }
+};
 
   return (
     <div>
@@ -73,13 +127,13 @@ export function AddInventoryProduct({ onBack }) {
         <div>
           <div className="mono text-[11px] mb-3" style={{ color: "var(--brass)" }}>PRICING</div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Purchase price"><Input type="number" value={form.purchasePrice || ""} onChange={set("purchasePrice")} placeholder="30" /></Field>
-            <Field label="Selling price *"><Input type="number" value={form.sellingPrice || ""} onChange={set("sellingPrice")} placeholder="40" /></Field>
+            <Field label="Purchase price"><Input type="number" value={form.purchase_price} onChange={set("purchase_price")} placeholder="30" /></Field>
+            <Field label="Selling price *"><Input type="number" value={form.price} onChange={set("price")}placeholder="40" /></Field>
             <Field label="MRP"><Input type="number" value={form.mrp || ""} onChange={set("mrp")} placeholder="45" /></Field>
             <Field label="GST">
-              <Select value={form.gst || ""} onChange={set("gst")}>
+              <Select value={form.gst_pct} onChange={set("gst_pct")}>
                 <option value="">Select GST</option>
-                <option>0%</option><option>5%</option><option>12%</option><option>18%</option><option>28%</option>
+                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option>
               </Select>
             </Field>
           </div>
@@ -88,8 +142,8 @@ export function AddInventoryProduct({ onBack }) {
         <div>
           <div className="mono text-[11px] mb-3" style={{ color: "var(--brass)" }}>INVENTORY</div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Opening stock"><Input type="number" value={form.openingStock || ""} onChange={set("openingStock")} placeholder="100" /></Field>
-            <Field label="Minimum stock alert"><Input type="number" value={form.minStock || ""} onChange={set("minStock")} placeholder="20" /></Field>
+            <Field label="Opening stock"><Input type="number" value={form.quantity} onChange={set("quantity")} placeholder="100" /></Field>
+            <Field label="Minimum stock alert"><Input type="number" value={form.min_stock || ""} onChange={set("min_stock")} placeholder="20" /></Field>
             <Field label="Unit">
               <Select value={form.unit || ""} onChange={set("unit")}>
                 <option value="">Select unit</option>
@@ -101,6 +155,7 @@ export function AddInventoryProduct({ onBack }) {
 
         <button
           type="button"
+          onClick={handleSave}
           className="rounded-md py-2.5 text-[14px] font-semibold disp"
           style={{ background: "var(--brass)", color: "#14171C" }}
         >

@@ -13,6 +13,8 @@ from app.core.time import to_ist_iso
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from app.core.enums import StockTransactionType
+from app.models.stock_transaction import StockTransaction
 
 logger = get_logger(__name__)
 
@@ -50,8 +52,8 @@ def to_bill_out(bill: Bill, salesperson_name: str) -> BillOut:
         ],
         subtotal=bill.subtotal,
         bill_discount_pct=bill.bill_discount_pct,
+        payment_method=bill.payment_method,
         grand_total=bill.grand_total,
-        # created_at=bill.created_at.isoformat(),
         created_at=to_ist_iso(bill.created_at),
         is_voided=bill.is_voided,
     )
@@ -219,6 +221,14 @@ def create_bill(payload: BillCreatePayload, store_id: str, salesperson_id: str) 
             effective_price = (
                 requested_item.unit_price if requested_item.unit_price is not None else product.price
             )
+            logger.info(
+                "Billing Debug | Product=%s | DB Price=%s | Request Unit Price=%s | Effective Price=%s | Qty=%s",
+                product.name,
+                product.price,
+                requested_item.unit_price,
+                effective_price,
+                requested_item.quantity,
+            )
             line_total = round(
                 effective_price * requested_item.quantity * (1 - requested_item.discount_pct / 100),
                 2,
@@ -227,9 +237,9 @@ def create_bill(payload: BillCreatePayload, store_id: str, salesperson_id: str) 
 
             # Atomic check + decrement -- raises 409 here if stock is insufficient.
 
-                # THIS CHECK is what's likely missing or misplaced in your version --
-    # decrement_product_stock must only be called when quantity is a
-        # real number, never when it's None (untracked).
+            # THIS CHECK is what's likely missing or misplaced in your version --
+            # decrement_product_stock must only be called when quantity is a
+            # real number, never when it's None (untracked).
             if product.quantity is not None:
                 decrement_product_stock(requested_item.product_id, store_id, requested_item.quantity)
                 decremented.append((requested_item.product_id, requested_item.quantity))
@@ -246,26 +256,46 @@ def create_bill(payload: BillCreatePayload, store_id: str, salesperson_id: str) 
                     line_total=line_total,
                 )
             )
-    except HTTPException:
-        # A later product failed (not found / out of stock) -- undo any
-        # stock already decremented earlier in this same bill attempt,
-        # so a failed bill never leaves inventory in a half-updated state.
-        for pid, qty in decremented:
-            restore_product_stock(pid, store_id, qty)
-        raise
+    
 
-    subtotal = round(subtotal, 2)
-    grand_total = round(subtotal * (1 - payload.bill_discount_pct / 100), 2)
+        subtotal = round(subtotal, 2)
+        grand_total = round(subtotal * (1 - payload.bill_discount_pct / 100), 2)
 
-    bill = Bill(
-        bill_number=_generate_bill_number(store_id),
-        store=store_id,
-        salesperson=salesperson_id,
-        items=line_items,
-        subtotal=subtotal,
-        bill_discount_pct=payload.bill_discount_pct,
-        grand_total=grand_total,
-    ).save()
+        bill = Bill(
+            bill_number=_generate_bill_number(store_id),
+            store=store_id,
+            salesperson=salesperson_id,
+            items=line_items,
+            subtotal=subtotal,
+            bill_discount_pct=payload.bill_discount_pct,
+            payment_method=payload.payment_method.value, #according to new billing and inventory system
+            grand_total=grand_total,
+        ).save()
+
+    except Exception:
+            # A later product failed (not found / out of stock) -- undo any
+            # stock already decremented earlier in this same bill attempt,
+            # so a failed bill never leaves inventory in a half-updated state.
+            for pid, qty in decremented:
+                restore_product_stock(pid, store_id, qty)
+            raise
+
+    # Log a SALE stock transaction for every tracked product on this bill.
+    # Deliberately done here, after the bill has actually saved -- not
+    # inside the earlier decrement loop -- so a bill that fails partway
+    # through (and rolls back via `decremented`) never leaves an orphan
+    # SALE record for a sale that didn't actually happen. `decremented`
+    # already only contains tracked-product line items, so no extra
+    # None-check is needed here.
+    for pid, qty in decremented:
+        StockTransaction(
+            product=pid,
+            store=store_id,
+            transaction_type=StockTransactionType.SALE.value,
+            quantity=qty,
+            notes=f"Sale via bill {bill.bill_number}",
+            created_by=salesperson_id,
+        ).save()
 
     salesperson = User.objects(id=salesperson_id).only("name").first()
     bill_out = to_bill_out(bill, salesperson.name if salesperson else "Unknown")

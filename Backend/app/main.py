@@ -13,6 +13,9 @@ from app.core.database import close_db, init_db
 from app.core.limiter import limiter
 from app.dashboard.routes import router as dashboard_router
 from app.products.routes import router as products_router
+from app.categories.routes import router as categories_router
+from app.brands.routes import router as brands_router
+from app.stock_transactions.routes import router as stock_transactions_router
 
 
 @asynccontextmanager
@@ -51,6 +54,9 @@ app.include_router(auth_router)
 app.include_router(products_router)
 app.include_router(bills_router)
 app.include_router(dashboard_router)
+app.include_router(categories_router)
+app.include_router(brands_router)
+app.include_router(stock_transactions_router)
 
 
 @app.get("/health")
