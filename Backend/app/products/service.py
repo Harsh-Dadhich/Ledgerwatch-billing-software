@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 import io
+import math
 import pandas as pd
 
 from app.core.logger import get_logger
@@ -9,6 +10,7 @@ from app.models.stock_transaction import StockTransaction
 from app.products.payload import LowStockProductResponse, ProductCreatePayload, ProductOut, ProductUpdatePayload,BulkImportResult, BulkImportRowError
 from app.categories.service import get_or_create_category
 from app.brands.service import get_or_create_brand
+from mongoengine.queryset.visitor import Q
 
 logger = get_logger(__name__)
 
@@ -49,27 +51,101 @@ def to_product_out(product: Product) -> ProductOut:
     )
 
 
-def list_products(store_id: str) -> list[Product]:
-    # .only() trims the fields fetched over the wire -- this list is
-    # read on every dashboard/bill-creation load, so keep it lean.
-    return (
-        Product.objects(store=store_id, is_active=True)
-        .only(
-            # "id", "name", "price", "quantity", "is_active"
-                "id",
-                "name",
-                "sku",
-                "barcode",
-                "category",
-                "brand",
-                "purchase_price",
-                "price",
-                "mrp",
-                "gst_pct",
-                "quantity",
-                "min_stock",
-                "is_active",).order_by("name")
+# def list_products(store_id: str) -> list[Product]:
+#     # .only() trims the fields fetched over the wire -- this list is
+#     # read on every dashboard/bill-creation load, so keep it lean.
+#     return (
+#         Product.objects(store=store_id, is_active=True)
+#         .only(
+#             # "id", "name", "price", "quantity", "is_active"
+#                 "id",
+#                 "name",
+#                 "sku",
+#                 "barcode",
+#                 "category",
+#                 "brand",
+#                 "purchase_price",
+#                 "price",
+#                 "mrp",
+#                 "gst_pct",
+#                 "quantity",
+#                 "min_stock",
+#                 "is_active",).order_by("name")
+#             )
+
+def list_products(
+    store_id: str,
+    search: str | None = None,
+    category=None,
+    page: int = 1,
+    page_size: int = 20,
+):
+    query = Product.objects(
+        store=store_id,
+        is_active=True,
+    )
+
+    if search:
+        search = search.strip()
+
+        if search:
+            query = query.filter(
+                Q(name__icontains=search)
+                | Q(sku__icontains=search)
+                | Q(barcode__icontains=search)
+                | Q(brand__icontains=search)
+                | Q(category__icontains=search)
             )
+    if category:
+        category = category.strip()
+
+        if category:
+            query = query.filter(
+                category__iexact=category
+            )
+
+    total = query.count()
+
+    skip = (page - 1) * page_size
+
+    products = (
+        query
+        .only(
+            "id",
+            "name",
+            "sku",
+            "barcode",
+            "category",
+            "brand",
+            "purchase_price",
+            "price",
+            "mrp",
+            "gst_pct",
+            "quantity",
+            "min_stock",
+            "is_active",
+        )
+        .order_by("name")
+        .skip(skip)
+        .limit(page_size)
+    )
+
+    total_pages = (
+        math.ceil(total / page_size)
+        if total > 0
+        else 0
+    )
+
+    return {
+        "items": [
+            to_product_out(product)
+            for product in products
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 def get_product(product_id: str, store_id: str) -> Product:
     product = Product.objects(id=product_id, store=store_id).first()
