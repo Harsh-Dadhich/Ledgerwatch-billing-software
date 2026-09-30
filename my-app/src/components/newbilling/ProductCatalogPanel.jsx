@@ -178,7 +178,7 @@ import {
 
 import { formatINR } from "../../utils/format";
 import { productsApi } from "../../api/products";
-import { categoriesApi } from "../../api/categories";
+import { categoriesApi } from "../../api/Categories";
 
 export function ProductCatalogPanel({ onAdd }) {
   const [query, setQuery] = useState("");
