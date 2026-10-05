@@ -19,3 +19,12 @@ class CategoryResponse(BaseModel):
     name: str
     description: Optional[str]
     is_active: bool
+
+class CategoryAnalyticsRow(BaseModel):
+    id: Optional[str] = None  # None for a name that has no master record
+    name: str
+    products: int  # active products in the category
+    stock: float  # total quantity on hand (untracked products count as 0)
+    low_stock: int  # tracked products at or below their min_stock
+    units: float  # units sold in the window
+    revenue: float  # sum of line_total in the window

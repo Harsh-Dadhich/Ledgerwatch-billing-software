@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.deps import (
     CurrentUser,
@@ -11,6 +11,7 @@ from app.brands.payload import (
     BrandResponse,
     CreateBrandRequest,
     UpdateBrandRequest,
+    BrandAnalyticsRow,
 )
 
 router = APIRouter(
@@ -36,6 +37,13 @@ def list_brands(
         service.to_brand_out(b)
         for b in brands
     ]
+
+@router.get("/brand-analytics", response_model=list[BrandAnalyticsRow])
+def brand_analytics(
+    days: int = Query(30, ge=1, le=90),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    return service.brand_analytics(current_user.store_id, days)
 
 
 @router.get(
