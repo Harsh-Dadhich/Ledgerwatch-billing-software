@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from fastapi import Query 
 
 from app.auth.deps import (
     CurrentUser,
@@ -11,6 +12,7 @@ from app.categories.payload import (
     CategoryResponse,
     CreateCategoryRequest,
     UpdateCategoryRequest,
+    CategoryAnalyticsRow,
 )
 
 router = APIRouter(
@@ -37,6 +39,13 @@ def list_categories(
         for c in categories
     ]
 
+
+@router.get("/category-analytics", response_model=list[CategoryAnalyticsRow])
+def category_analytics(
+    days: int = Query(30, ge=1, le=90),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    return service.category_analytics(current_user.store_id, days)
 
 @router.get(
     "/{category_id}",

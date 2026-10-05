@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 
+from app.categories.service import _entity_analytics
 from app.core.logger import get_logger
 from app.models.brand import Brand
 from app.brands.payload import (
@@ -7,6 +8,9 @@ from app.brands.payload import (
     UpdateBrandRequest,
     BrandResponse
 )
+from app.models.brand import Brand  # <-- adjust to your Brand model path
+ 
+
 
 logger = get_logger(__name__)
 
@@ -194,5 +198,8 @@ def get_or_create_brand(
         store_id,
         brand.id,
     )
+     
+def brand_analytics(store_id, days: int):
+    return _entity_analytics(store_id, days, "brand", Brand, "Unbranded")
 
     return brand
